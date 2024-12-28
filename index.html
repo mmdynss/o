@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Informasi Rute Transportasi</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.22.1/cytoscape.min.js"></script>
+    <style>
+        /* Tampilan umum */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #cy {
+            width: 100%;
+            height: 500px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .highlighted-edge {
+            stroke: #ff4d4d;
+        }
+
+        .highlighted-node {
+            border-color: #ff4d4d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sistem Informasi Rute Transportasi</h1>
+        <form id="searchForm">
+            <label for="source">Halte Asal (A/B/C/D/E):</label>
+            <input type="text" id="source" placeholder="Contoh: A" required>
+            
+            <label for="target">Halte Tujuan (A/B/C/D/E):</label>
+            <input type="text" id="target" placeholder="Contoh: E" required>
+            
+            <label for="algorithm">Pilih Algoritma:</label>
+            <select id="algorithm">
+                <option value="dfs">DFS (Depth-First Search)</option>
+                <option value="bfs">BFS (Breadth-First Search)</option>
+                <option value="dijkstra">Dijkstra</option>
+            </select>
+            
+            <button type="submit">Cari Rute</button>
+        </form>
+
+        <div id="cy"></div>
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // Inisialisasi Cytoscape.js
+        const cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: [
+                { data: { id: 'A', label: 'Halte A' } },
+                { data: { id: 'B', label: 'Halte B' } },
+                { data: { id: 'C', label: 'Halte C' } },
+                { data: { id: 'D', label: 'Halte D' } },
+                { data: { id: 'E', label: 'Halte E' } },
+                { data: { source: 'A', target: 'B', weight: 500 } },
+                { data: { source: 'B', target: 'C', weight: 700 } },
+                { data: { source: 'C', target: 'D', weight: 800 } },
+                { data: { source: 'D', target: 'E', weight: 600 } },
+                { data: { source: 'A', target: 'C', weight: 1200 } },
+                { data: { source: 'B', target: 'E', weight: 1000 } },
+            ],
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#007bff',
+                        'label': 'data(label)',
+                        'color': '#fff',
+                        'text-valign': 'center',
+                        'text-halign': 'center',
+                        'height': 40,
+                        'width': 40,
+                        'border-width': 2,
+                        'border-color': '#0056b3',
+                        'font-size': '12px'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'label': 'data(weight) m',
+                        'font-size': '12px',
+                        'width': 3,
+                        'line-color': '#bbb',
+                        'target-arrow-color': '#bbb',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'bezier',
+                    }
+                }
+            ],
+            layout: {
+                name: 'circle'
+            }
+        });
+
+        // Fungsi menyorot rute hasil pencarian
+        function highlightRoute(route) {
+            cy.elements().removeClass('highlighted');
+            route.forEach((node, index) => {
+                if (index < route.length - 1) {
+                    const edge = cy.edges(`[source="${node}"][target="${route[index + 1]}"], 
+                                          [source="${route[index + 1]}"][target="${node}"]`);
+                    edge.style({
+                        'line-color': '#ff4d4d',
+                        'width': 4
+                    });
+                }
+            });
+        }
+
+        // Formulir pencarian
+        document.getElementById('searchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const source = document.getElementById('source').value.toUpperCase();
+            const target = document.getElementById('target').value.toUpperCase();
+            const algorithm = document.getElementById('algorithm').value;
+
+            // Dummy pencarian rute
+            let route;
+            if (algorithm === 'dfs') {
+                route = ['A', 'B', 'C', 'D', 'E'];
+            } else if (algorithm === 'bfs') {
+                route = ['A', 'C', 'E'];
+            } else {
+                route = ['A', 'B', 'E'];
+            }
+
+            highlightRoute(route);
+            document.getElementById('result').innerHTML = `
+                <h3>Hasil Pencarian:</h3>
+                <p>Rute dengan ${algorithm.toUpperCase()}: ${route.join(' → ')}</p>
+            `;
+        });
+    </script>
+</body>
+</html>
